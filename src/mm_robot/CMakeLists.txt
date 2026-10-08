@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.8)
+project(mm_robot)
+find_package(ament_cmake REQUIRED)
+install(DIRECTORY urdf worlds config maps launch DESTINATION share/${PROJECT_NAME})
+install(PROGRAMS scripts/detector.py scripts/mission.py DESTINATION lib/${PROJECT_NAME})
+ament_package()

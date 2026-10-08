@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="mm">
+<material name="grey"><color rgba="0.6 0.6 0.65 1"/></material>
+<material name="blue"><color rgba="0.2 0.4 0.8 1"/></material>
+<material name="black"><color rgba="0.1 0.1 0.1 1"/></material>
+
+<xacro:macro name="blk" params="name m x y z mat oz:=0">
+<link name="${name}">
+<visual><origin xyz="0 0 ${oz}"/><geometry><box size="${x} ${y} ${z}"/></geometry><material name="${mat}"/></visual>
+<collision><origin xyz="0 0 ${oz}"/><geometry><box size="${x} ${y} ${z}"/></geometry></collision>
+<inertial><origin xyz="0 0 ${oz}"/><mass value="${m}"/><inertia ixx="${m*(y*y+z*z)/12}" ixy="0" ixz="0" iyy="${m*(x*x+z*z)/12}" iyz="0" izz="${m*(x*x+y*y)/12}"/></inertial>
+</link></xacro:macro>
+
+<xacro:macro name="cyl" params="name m r h oz mat">
+<link name="${name}">
+<visual><origin xyz="0 0 ${oz}"/><geometry><cylinder radius="${r}" length="${h}"/></geometry><material name="${mat}"/></visual>
+<collision><origin xyz="0 0 ${oz}"/><geometry><cylinder radius="${r}" length="${h}"/></geometry></collision>
+<inertial><origin xyz="0 0 ${oz}"/><mass value="${m}"/><inertia ixx="${m*(3*r*r+h*h)/12}" ixy="0" ixz="0" iyy="${m*(3*r*r+h*h)/12}" iyz="0" izz="${m*r*r/2}"/></inertial>
+</link></xacro:macro>
+
+<xacro:macro name="fix" params="name parent child xyz rpy:='0 0 0'">
+<joint name="${name}" type="fixed"><parent link="${parent}"/><child link="${child}"/><origin xyz="${xyz}" rpy="${rpy}"/></joint>
+</xacro:macro>
+
+<xacro:macro name="rev" params="name parent child xyz axis">
+<joint name="${name}" type="revolute"><parent link="${parent}"/><child link="${child}"/><origin xyz="${xyz}"/><axis xyz="${axis}"/>
+<limit lower="-2.6" upper="2.6" effort="100" velocity="2"/><dynamics damping="1.0" friction="0.1"/></joint>
+</xacro:macro>
+
+<xacro:macro name="wheel" params="side y">
+<xacro:cyl name="${side}_wheel" m="0.5" r="0.08" h="0.04" oz="0" mat="black"/>
+<joint name="${side}_wheel_joint" type="continuous"><parent link="base_link"/><child link="${side}_wheel"/><origin xyz="0 ${y} -0.02" rpy="-1.5708 0 0"/><axis xyz="0 0 1"/></joint>
+<gazebo reference="${side}_wheel"><mu1>1.0</mu1><mu2>1.0</mu2></gazebo>
+</xacro:macro>
+
+<xacro:macro name="caster" params="name x">
+<link name="${name}"><visual><geometry><sphere radius="0.04"/></geometry><material name="black"/></visual><collision><geometry><sphere radius="0.04"/></geometry></collision>
+<inertial><mass value="0.1"/><inertia ixx="6.4e-5" ixy="0" ixz="0" iyy="6.4e-5" iyz="0" izz="6.4e-5"/></inertial></link>
+<xacro:fix name="${name}_joint" parent="base_link" child="${name}" xyz="${x} 0 -0.06"/>
+<gazebo reference="${name}"><mu1>0.0</mu1><mu2>0.0</mu2></gazebo>
+</xacro:macro>
+
+<xacro:macro name="jif" params="n"><joint name="${n}"><command_interface name="position"/><state_interface name="position"/><state_interface name="velocity"/></joint></xacro:macro>
+
+<!-- base -->
+<link name="base_footprint"/>
+<xacro:blk name="base_link" m="5" x="0.5" y="0.35" z="0.12" mat="grey"/>
+<xacro:fix name="base_joint" parent="base_footprint" child="base_link" xyz="0 0 0.10"/>
+<xacro:wheel side="left" y="0.2"/><xacro:wheel side="right" y="-0.2"/>
+<xacro:caster name="caster_front" x="0.2"/><xacro:caster name="caster_rear" x="-0.2"/>
+
+<!-- sensors -->
+<xacro:blk name="lidar_link" m="0.1" x="0.06" y="0.06" z="0.04" mat="black"/>
+<xacro:fix name="lidar_joint" parent="base_link" child="lidar_link" xyz="0.2 0 0.08"/>
+<xacro:blk name="mast" m="0.3" x="0.03" y="0.03" z="0.35" mat="grey"/>
+<xacro:fix name="mast_joint" parent="base_link" child="mast" xyz="0 0.14 0.235"/>
+<xacro:blk name="camera_link" m="0.05" x="0.03" y="0.06" z="0.03" mat="black"/>
+<xacro:fix name="camera_joint" parent="mast" child="camera_link" xyz="0.03 0 0.19" rpy="0 0.2 0"/>
+
+<!-- arm -->
+<xacro:cyl name="arm_1" m="1.0" r="0.045" h="0.10" oz="0.05" mat="blue"/>
+<xacro:cyl name="arm_2" m="1.0" r="0.035" h="0.30" oz="0.15" mat="grey"/>
+<xacro:cyl name="arm_3" m="0.8" r="0.03" h="0.25" oz="0.125" mat="blue"/>
+<xacro:cyl name="arm_4" m="0.3" r="0.025" h="0.08" oz="0.04" mat="grey"/>
+<xacro:cyl name="arm_5" m="0.2" r="0.025" h="0.06" oz="0.03" mat="blue"/>
+<xacro:blk name="gripper_base" m="0.3" x="0.04" y="0.14" z="0.03" mat="grey" oz="0.015"/>
+<xacro:rev name="joint1" parent="base_link" child="arm_1" xyz="0.12 0 0.06" axis="0 0 1"/>
+<xacro:rev name="joint2" parent="arm_1" child="arm_2" xyz="0 0 0.10" axis="0 1 0"/>
+<xacro:rev name="joint3" parent="arm_2" child="arm_3" xyz="0 0 0.30" axis="0 1 0"/>
+<xacro:rev name="joint4" parent="arm_3" child="arm_4" xyz="0 0 0.25" axis="0 0 1"/>
+<xacro:rev name="joint5" parent="arm_4" child="arm_5" xyz="0 0 0.08" axis="0 1 0"/>
+<xacro:rev name="joint6" parent="arm_5" child="gripper_base" xyz="0 0 0.06" axis="0 0 1"/>
+
+<!-- gripper -->
+<xacro:blk name="finger_left" m="0.05" x="0.03" y="0.012" z="0.06" mat="black" oz="0.03"/>
+<xacro:blk name="finger_right" m="0.05" x="0.03" y="0.012" z="0.06" mat="black" oz="0.03"/>
+<joint name="finger_left_joint" type="prismatic"><parent link="gripper_base"/><child link="finger_left"/><origin xyz="0 0.05 0.03"/><axis xyz="0 -1 0"/>
+<limit lower="0" upper="0.03" effort="20" velocity="0.2"/><dynamics damping="1.0" friction="0.0"/></joint>
+<joint name="finger_right_joint" type="prismatic"><parent link="gripper_base"/><child link="finger_right"/><origin xyz="0 -0.05 0.03"/><axis xyz="0 1 0"/>
+<limit lower="0" upper="0.03" effort="20" velocity="0.2"/><dynamics damping="1.0" friction="0.0"/></joint>
+<gazebo reference="finger_left"><mu1>2.0</mu1><mu2>2.0</mu2></gazebo>
+<gazebo reference="finger_right"><mu1>2.0</mu1><mu2>2.0</mu2></gazebo>
+
+<ros2_control name="GazeboSystem" type="system">
+<hardware><plugin>gz_ros2_control/GazeboSimSystem</plugin></hardware>
+<xacro:jif n="joint1"/><xacro:jif n="joint2"/><xacro:jif n="joint3"/><xacro:jif n="joint4"/><xacro:jif n="joint5"/><xacro:jif n="joint6"/>
+<xacro:jif n="finger_left_joint"/><xacro:jif n="finger_right_joint"/>
+</ros2_control>
+
+<gazebo>
+<plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+<parameters>$(find mm_robot)/config/controllers.yaml</parameters>
+<robot_param>robot_description</robot_param><robot_param_node>robot_state_publisher</robot_param_node>
+</plugin>
+<plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+<left_joint>left_wheel_joint</left_joint><right_joint>right_wheel_joint</right_joint>
+<wheel_separation>0.4</wheel_separation><wheel_radius>0.08</wheel_radius>
+<topic>cmd_vel</topic><odom_topic>odom</odom_topic><tf_topic>/tf</tf_topic>
+<frame_id>odom</frame_id><child_frame_id>base_footprint</child_frame_id><odom_publish_frequency>30</odom_publish_frequency>
+</plugin>
+<plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+<topic>wheel_states</topic><joint_name>left_wheel_joint</joint_name><joint_name>right_wheel_joint</joint_name>
+</plugin>
+</gazebo>
+
+<gazebo reference="lidar_link"><sensor name="lidar" type="gpu_lidar"><topic>scan</topic><update_rate>10</update_rate><always_on>true</always_on><gz_frame_id>lidar_link</gz_frame_id>
+<lidar><scan><horizontal><samples>360</samples><min_angle>-3.14159</min_angle><max_angle>3.14159</max_angle></horizontal></scan><range><min>0.15</min><max>8.0</max></range></lidar></sensor></gazebo>
+<gazebo reference="camera_link"><sensor name="cam" type="camera"><topic>camera/image_raw</topic><update_rate>10</update_rate><always_on>true</always_on><gz_frame_id>camera_link</gz_frame_id>
+<camera><horizontal_fov>1.047</horizontal_fov><image><width>320</width><height>240</height><format>R8G8B8</format></image><clip><near>0.05</near><far>10</far></clip></camera></sensor></gazebo>
+</robot>
