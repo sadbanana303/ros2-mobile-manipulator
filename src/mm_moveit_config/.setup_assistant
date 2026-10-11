@@ -1,0 +1,10 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: mm_robot
+    relative_path: urdf/mm.urdf.xacro
+  srdf:
+    relative_path: config/mm.srdf
+  package_settings:
+    author_name: Nandana Narendra
+    author_email: nanmihi.narendra@gmail.com
+    generated_timestamp: 1791714459
